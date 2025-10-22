@@ -8,7 +8,7 @@ using UnityEngine.AI;
 using UnityEngine.Events;
 
 /*
-Préparer un terrain où toutes les terrasses sont accessibles
+Prï¿½parer un terrain oï¿½ toutes les terrasses sont accessibles
 */
 
 public abstract class ArmyManager : MonoBehaviour
@@ -23,24 +23,93 @@ public abstract class ArmyManager : MonoBehaviour
 
     [SerializeField] UnityEvent m_OnArmyIsDead;
 
-    protected List<T> GetAllEnemiesOfType<T>(bool sortRandom) where T : ArmyElement
+    #region Allies Retrieval
+    public List<ArmyElement> GetAllAllies(bool sortRandom, ArmyElement allyBuyer)
     {
-        var enemies = GameObject.FindObjectsOfType<T>().Where(element => !element.gameObject.CompareTag(m_ArmyTag)).ToList();
+        var allies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => element != allyBuyer && element.gameObject.CompareTag(m_ArmyTag)).ToList();
+        if (sortRandom) allies.Sort((a, b) => Random.value.CompareTo(.5f));
+        return allies;
+    }
+
+    public GameObject GetRandomAlly(ArmyElement allyBuyer)
+    {
+        var allies = GetAllAllies(true, allyBuyer);
+        return allies.FirstOrDefault()?.gameObject;
+    }
+
+    public GameObject GetRandomWeakAlly(ArmyElement allyBuyer)
+    {
+        var weakAllies = GetAllAllies(true, allyBuyer).Where(item =>
+        {
+            Health health = item.GetComponentInChildren<Health>();
+            return health && health.Value < 100;
+        });
+        return weakAllies.FirstOrDefault()?.gameObject;
+    }
+    #endregion
+
+
+    #region Enemies Retrieval
+    //all enemies
+    public List<ArmyElement> GetAllEnemies(bool sortRandom)
+    {
+        var enemies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => !element.gameObject.CompareTag(m_ArmyTag)).ToList();
         if (sortRandom) enemies.Sort((a, b) => Random.value.CompareTo(.5f));
         return enemies;
     }
 
-    public GameObject GetRandomEnemy<T>(Vector3 centerPos, float minRadius, float maxRadius) where T : ArmyElement
+    public List<ArmyElement> GetAllEnemiesOfType<T>(bool sortRandom) where T : ArmyElement
     {
-        var enemies = GetAllEnemiesOfType<T>(true).Where(
-            item=>  Vector3.Distance(centerPos,item.transform.position)>minRadius
-                    && Vector3.Distance(centerPos, item.transform.position) < maxRadius);
+        var enemies = GetAllEnemies(sortRandom).Where(element => (element is T)
+                                                        && !element.gameObject.CompareTag(m_ArmyTag)).ToList();
+        return enemies;
+    }
 
+    public List<ArmyElement> GetAllEnemiesByDistance(bool sortRandom, Vector3 centerPos, float minRadius, float maxRadius)
+    {
+        var enemies = GetAllEnemies(sortRandom).Where(
+            item => Vector3.Distance(centerPos, item.transform.position) > minRadius
+                    && Vector3.Distance(centerPos, item.transform.position) < maxRadius).ToList();
+        return enemies;
+    }
+
+    public List<ArmyElement> GetAllEnemiesOfTypeByDistance<T>(bool sortRandom, Vector3 centerPos, float minRadius, float maxRadius) where T : ArmyElement
+    {
+        var enemies = GetAllEnemiesOfType<T>(sortRandom).Where(
+            item => Vector3.Distance(centerPos, item.transform.position) > minRadius
+                    && Vector3.Distance(centerPos, item.transform.position) < maxRadius).ToList();
+        return enemies;
+    }
+
+    // Random Enemy
+    public GameObject GetRandomEnemy()
+    {
+        var enemies = GetAllEnemies(true);
         return enemies.FirstOrDefault()?.gameObject;
     }
 
-    protected void ComputeStatistics(ref int nDrones,ref int nTurrets,ref int cumulatedHealth)
-	{
+    public GameObject GetRandomEnemyOfType<T>() where T : ArmyElement
+    {
+        var enemies = GetAllEnemiesOfType<T>(true);
+        return enemies.FirstOrDefault()?.gameObject;
+    }
+
+    public GameObject GetRandomEnemyByDistance(Vector3 centerPos, float minRadius, float maxRadius)
+    {
+        var enemies = GetAllEnemiesByDistance(true, centerPos, minRadius, maxRadius);
+        return enemies.FirstOrDefault()?.gameObject;
+    }
+
+
+    public GameObject GetRandomEnemyOfTypeByDistance<T>(Vector3 centerPos, float minRadius, float maxRadius) where T : ArmyElement
+    {
+        var enemies = GetAllEnemiesOfTypeByDistance<T>(true, centerPos, minRadius, maxRadius);
+        return enemies.FirstOrDefault()?.gameObject;
+    }
+    #endregion
+
+    protected void ComputeStatistics(ref int nDrones, ref int nTurrets, ref int cumulatedHealth)
+    {
         nDrones = m_ArmyElements.Count(item => item is Drone);
         nTurrets = m_ArmyElements.Count(item => item is Turret);
         cumulatedHealth = (int)m_ArmyElements.Sum(item => item.Health);
@@ -49,7 +118,7 @@ public abstract class ArmyManager : MonoBehaviour
     // Start is called before the first frame update
     public virtual IEnumerator Start()
     {
-        yield return null; // on attend une frame que tous les objets aient été instanciés ...
+        yield return null; // on attend une frame que tous les objets aient ï¿½tï¿½ instanciï¿½s ...
 
         GameObject[] allArmiesElements = GameObject.FindGameObjectsWithTag(m_ArmyTag);
         foreach (var item in allArmiesElements)
@@ -65,12 +134,12 @@ public abstract class ArmyManager : MonoBehaviour
     }
 
     protected void RefreshHudDisplay()
-	{
-        int nDrones=0, nTurrets=0, health=0;
+    {
+        int nDrones = 0, nTurrets = 0, health = 0;
         ComputeStatistics(ref nDrones, ref nTurrets, ref health);
 
         m_NDronesText.text = nDrones.ToString();
-        m_NTurretsText.text = nTurrets.ToString() ;
+        m_NTurretsText.text = nTurrets.ToString();
         m_HealthText.text = health.ToString();
     }
 
@@ -79,9 +148,9 @@ public abstract class ArmyManager : MonoBehaviour
         m_ArmyElements.Remove(go.GetComponent<IArmyElement>());
         RefreshHudDisplay();
 
-        if (m_ArmyElements.Count == 0 & m_OnArmyIsDead!=null) m_OnArmyIsDead.Invoke();
+        if (m_ArmyElements.Count == 0 & m_OnArmyIsDead != null) m_OnArmyIsDead.Invoke();
     }
-    
+
 }
 
 
