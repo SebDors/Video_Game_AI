@@ -2,14 +2,12 @@ using UnityEngine;
 using BehaviorDesigner.Runtime;
 using BehaviorDesigner.Runtime.Tasks;
 
-[TaskDescription("Heals a target GameObject with a Health component.")]
+[TaskDescription("Heals a target GameObject with a Health component to full health.")]
 [TaskCategory("MyTasks")]
 public class HealTarget : Action
 {
     [BehaviorDesigner.Runtime.Tasks.Tooltip("The target to heal.")]
     public SharedTransform target;
-    [BehaviorDesigner.Runtime.Tasks.Tooltip("The amount of health to restore.")]
-    public SharedFloat healAmount = 10f;
 
     public override TaskStatus OnUpdate()
     {
@@ -18,10 +16,9 @@ public class HealTarget : Action
             return TaskStatus.Failure;
         }
 
-        var healthComponent = target.Value.GetComponent<Health>();
+        var healthComponent = target.Value.GetComponentInChildren<Health>();
         if (healthComponent == null)
         {
-            // This shouldn't happen if FindWeakestAlly is used correctly.
             return TaskStatus.Failure;
         }
 
@@ -31,7 +28,7 @@ public class HealTarget : Action
             return TaskStatus.Success;
         }
 
-        healthComponent.Heal(healAmount.Value);
+        healthComponent.HealToFull();
 
         // Return success to indicate the heal was applied.
         return TaskStatus.Success;

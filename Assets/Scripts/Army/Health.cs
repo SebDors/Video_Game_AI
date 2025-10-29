@@ -35,9 +35,10 @@ public class Health : MonoBehaviour
 		if (m_Health == 0 && m_OnDieEvent != null) m_OnDieEvent.Invoke();
 	}
 
-	public void Heal(float amount)
+	public void HealToFull()
 	{
-		m_Health = Mathf.Min(m_Health + amount, m_StartHealth);
+		m_Health = m_StartHealth;
+		Debug.Log($"{gameObject.name} healed to full. Current health: {m_Health}");
 		RefreshHealthDisplay();
 	}
 }
