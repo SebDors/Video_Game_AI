@@ -7,7 +7,7 @@ using BehaviorDesigner.Runtime.Tasks;
 public class HealTarget : Action
 {
     [BehaviorDesigner.Runtime.Tasks.Tooltip("The target to heal.")]
-    public SharedGameObject target;
+    public SharedTransform target;
     [BehaviorDesigner.Runtime.Tasks.Tooltip("The amount of health to restore.")]
     public SharedFloat healAmount = 10f;
 

@@ -3,11 +3,11 @@ using BehaviorDesigner.Runtime;
 using BehaviorDesigner.Runtime.Tasks;
 
 [TaskDescription("Finds a random weak ally using the ArmyManager.")]
-[TaskCategory("My Behavior Trees")]
+[TaskCategory("MyTasks")]
 public class FindWeakestAlly : Action
 {
     [BehaviorDesigner.Runtime.Tasks.Tooltip("The found ally will be stored in this variable")]
-    public SharedGameObject returnedObject;
+    public SharedTransform returnedObject;
 
     private ArmyManager armyManager;
     private ArmyElement self;
@@ -15,24 +15,48 @@ public class FindWeakestAlly : Action
     public override void OnStart()
     {
         self = GetComponent<ArmyElement>();
+        if (self == null)
+        {
+            Debug.LogWarning("FindWeakestAlly: No ArmyElement found on this agent. Task will fail.");
+            return;
+        }
         // ArmyManager is assigned at runtime by the manager itself, so we get it from our own ArmyElement component.
-        if (self != null && self.ArmyManager != null)
+        if (self.ArmyManager != null)
         {
             armyManager = self.ArmyManager;
         }
+
+        // // Add a null check for returnedObject here
+        // if (returnedObject == null)
+        // {
+        //     Debug.LogWarning("FindWeakestAlly: returnedObject is null in OnStart. Attempting to initialize.");
+        //     returnedObject = new SharedGameObject(); // Initialize it to prevent NRE later
+        // }
     }
 
     public override TaskStatus OnUpdate()
     {
+        if (self == null)
+        {
+            Debug.LogWarning("FindWeakestAlly: ArmyElement is null. Task cannot proceed.");
+            return TaskStatus.Failure;
+        }
+
         // If the manager wasn't found on start, try again.
-        if (armyManager == null && self != null)
+        if (armyManager == null)
         {
             armyManager = self.ArmyManager;
         }
 
         if (armyManager == null)
         {
-            Debug.LogWarning("ArmyManager not found on this agent. Cannot find weak ally.");
+            Debug.LogWarning("FindWeakestAlly: ArmyManager not found on this agent. Cannot find weak ally.");
+            return TaskStatus.Failure;
+        }
+
+        if (returnedObject == null)
+        {
+            Debug.LogWarning("FindWeakestAlly: returnedObject is not assigned in the Behavior Designer editor. Task will fail.");
             return TaskStatus.Failure;
         }
 
@@ -40,7 +64,7 @@ public class FindWeakestAlly : Action
 
         if (weakAlly != null)
         {
-            returnedObject.Value = weakAlly;
+            returnedObject.Value = weakAlly.transform;
             return TaskStatus.Success;
         }
 

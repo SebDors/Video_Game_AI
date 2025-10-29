@@ -26,7 +26,7 @@ public abstract class ArmyManager : MonoBehaviour
     #region Allies Retrieval
     public List<ArmyElement> GetAllAllies(bool sortRandom, ArmyElement allyBuyer)
     {
-        var allies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => element != allyBuyer && element.gameObject.CompareTag(m_ArmyTag)).ToList();
+        var allies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => element != null && element != allyBuyer && element.gameObject.CompareTag(m_ArmyTag)).ToList();
         if (sortRandom) allies.Sort((a, b) => Random.value.CompareTo(.5f));
         return allies;
     }
