@@ -42,7 +42,7 @@ public abstract class ArmyManager : MonoBehaviour
         var weakAllies = GetAllAllies(true, allyBuyer).Where(item =>
         {
             Health health = item.GetComponentInChildren<Health>();
-            return health && health.Value < 100;
+            return health && health.HealthPercentage < 1.0f;
         });
         return weakAllies.FirstOrDefault()?.gameObject;
     }

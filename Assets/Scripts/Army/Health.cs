@@ -10,6 +10,7 @@ public class Health : MonoBehaviour
 	[SerializeField] float m_StartHealth;
 	float m_Health;
 	public float Value => m_Health;
+	public float HealthPercentage => m_Health / m_StartHealth;
 
 	[SerializeField] Slider m_HealthBar;
 
@@ -32,5 +33,11 @@ public class Health : MonoBehaviour
 		RefreshHealthDisplay();
 
 		if (m_Health == 0 && m_OnDieEvent != null) m_OnDieEvent.Invoke();
+	}
+
+	public void Heal(float amount)
+	{
+		m_Health = Mathf.Min(m_Health + amount, m_StartHealth);
+		RefreshHealthDisplay();
 	}
 }
