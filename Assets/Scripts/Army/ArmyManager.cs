@@ -27,7 +27,7 @@ public abstract class ArmyManager : MonoBehaviour
     public List<ArmyElement> GetAllAllies(bool sortRandom, ArmyElement allyBuyer)
     {
         var allies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => element != allyBuyer && element.gameObject.CompareTag(m_ArmyTag)).ToList();
-        if (sortRandom) allies.Sort((a, b) => Random.value.CompareTo(.5f));
+        if (sortRandom) Shuffle(allies);
         return allies;
     }
 
@@ -54,7 +54,7 @@ public abstract class ArmyManager : MonoBehaviour
     public List<ArmyElement> GetAllEnemies(bool sortRandom)
     {
         var enemies = GameObject.FindObjectsOfType<ArmyElement>().Where(element => !element.gameObject.CompareTag(m_ArmyTag)).ToList();
-        if (sortRandom) enemies.Sort((a, b) => Random.value.CompareTo(.5f));
+        if (sortRandom) Shuffle(enemies);
         return enemies;
     }
 
@@ -149,6 +149,18 @@ public abstract class ArmyManager : MonoBehaviour
         RefreshHudDisplay();
 
         if (m_ArmyElements.Count == 0 & m_OnArmyIsDead != null) m_OnArmyIsDead.Invoke();
+    }
+
+    protected void Shuffle<T>(List<T> list)
+    {
+        // Fisher-Yates to keep random ordering deterministic per shuffle call
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int swapIndex = Random.Range(0, i + 1);
+            T temp = list[i];
+            list[i] = list[swapIndex];
+            list[swapIndex] = temp;
+        }
     }
 
 }
