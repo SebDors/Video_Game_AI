@@ -51,10 +51,8 @@ namespace BehaviorDesigner.Runtime.Tasks.Movement
 
 		bool HasArrivedRotation()
 		{
-			if (m_Target.Value == null) return false;
-			Vector3 vect = Vector3.ProjectOnPlane(m_Target.Value.position - transform.position, Vector3.up);
-
-			return Vector3.Angle(vect.normalized, m_Transform.forward) <= m_ArriveAngle;
+			// Always return true, as rotation is no longer a factor for task completion.
+			return true;
 		}
 
 		bool HasArrived()
@@ -62,8 +60,6 @@ namespace BehaviorDesigner.Runtime.Tasks.Movement
 			return HasArrivedTranslation() && HasArrivedRotation();
 		}
 
-		// Seek the destination. Return success once the agent has reached the destination.
-		// Return running if the agent hasn't reached the destination yet
 		public override TaskStatus OnUpdate()
         {
             if (m_Target.Value == null) return TaskStatus.Failure;
@@ -77,32 +73,36 @@ namespace BehaviorDesigner.Runtime.Tasks.Movement
 		{
 			if (m_Target.Value == null) return;
 
+			// --- Rotation --- (Removed as per user request)
+            // The drone will no longer rotate to face the target.
+
+			// --- Translation --- (Modified to move towards target XZ and maintain height)
 			if (!HasArrivedTranslation())
 			{
 				m_TranslationSpeed = Mathf.Min(m_TranslationMaxSpeed, m_TranslationSpeed + m_LinearAcceleration * Time.fixedDeltaTime);
-
 				float dist = m_TranslationSpeed * Time.fixedDeltaTime;
 
-				Vector3 nextPosition = m_Rigidbody.position + dist * transform.forward;
+				Vector3 currentPosition = m_Rigidbody.position;
+				Vector3 targetPosition = m_Target.Value.position;
+
+				// Calculate XZ movement towards target
+				Vector3 directionToTargetXZ = Vector3.ProjectOnPlane(targetPosition - currentPosition, Vector3.up).normalized;
+				Vector3 newPosition = currentPosition + directionToTargetXZ * dist;
+
+				// Adjust Y position to maintain height above terrain
+				Vector3 posOnTerrain = Vector3.zero;
 				Vector3 normalOnTerrain = Vector3.zero;
-
-				if (TerrainManager.Instance.GetVerticallyAlignedPositionOnTerrain(nextPosition, ref nextPosition, ref normalOnTerrain))
+				if (TerrainManager.Instance.GetVerticallyAlignedPositionOnTerrain(newPosition, ref posOnTerrain, ref normalOnTerrain))
 				{
-					//position
-					nextPosition += Vector3.up * m_InitHeightFromGround;
-					Vector3 move = nextPosition - m_Rigidbody.position;
-
-					if (move.sqrMagnitude > 0)
-						m_Rigidbody.MovePosition(m_Rigidbody.position + move.normalized * dist);
+					newPosition.y = posOnTerrain.y + m_InitHeightFromGround;
 				}
-			}
+				// If terrain not found, it will just move in XZ plane and keep current Y.
 
-			if (!HasArrivedRotation())
+				m_Rigidbody.MovePosition(newPosition);
+			}
+			else
 			{
-				//orientation
-				Quaternion targetQ = Quaternion.LookRotation(Vector3.ProjectOnPlane(m_Target.Value.position - m_Transform.position, Vector3.up).normalized);
-				Quaternion newtOrientation = Quaternion.RotateTowards(m_Transform.rotation, targetQ, m_AngularSpeed * Time.fixedDeltaTime);
-				m_Rigidbody.MoveRotation(newtOrientation);
+				m_TranslationSpeed = 0;
 			}
 		}
 
