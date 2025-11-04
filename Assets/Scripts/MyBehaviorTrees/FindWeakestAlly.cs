@@ -1,13 +1,20 @@
 using UnityEngine;
 using BehaviorDesigner.Runtime;
 using BehaviorDesigner.Runtime.Tasks;
+using System.Linq;
 
-[TaskDescription("Finds a random weak ally using the ArmyManager.")]
+[TaskDescription("Finds the best ally to heal based on a weighted score of health and distance.")]
 [TaskCategory("MyTasks")]
 public class FindWeakestAlly : Action
 {
     [BehaviorDesigner.Runtime.Tasks.Tooltip("The found ally will be stored in this variable")]
     public SharedTransform returnedObject;
+
+    [BehaviorDesigner.Runtime.Tasks.Tooltip("Weight for the ally's health (lower health = higher priority)")]
+    public float healthWeight = 1.0f;
+
+    [BehaviorDesigner.Runtime.Tasks.Tooltip("Weight for the distance to the ally (closer = higher priority)")]
+    public float distanceWeight = 1.0f;
 
     private ArmyManager armyManager;
     private ArmyElement self;
@@ -20,55 +27,77 @@ public class FindWeakestAlly : Action
             Debug.LogWarning("FindWeakestAlly: No ArmyElement found on this agent. Task will fail.");
             return;
         }
-        // ArmyManager is assigned at runtime by the manager itself, so we get it from our own ArmyElement component.
+
         if (self.ArmyManager != null)
         {
             armyManager = self.ArmyManager;
         }
-
-        // // Add a null check for returnedObject here
-        // if (returnedObject == null)
-        // {
-        //     Debug.LogWarning("FindWeakestAlly: returnedObject is null in OnStart. Attempting to initialize.");
-        //     returnedObject = new SharedGameObject(); // Initialize it to prevent NRE later
-        // }
     }
 
     public override TaskStatus OnUpdate()
     {
         if (self == null)
         {
-            Debug.LogWarning("FindWeakestAlly: ArmyElement is null. Task cannot proceed.");
             return TaskStatus.Failure;
-        }
-
-        // If the manager wasn't found on start, try again.
-        if (armyManager == null)
-        {
-            armyManager = self.ArmyManager;
         }
 
         if (armyManager == null)
         {
-            Debug.LogWarning("FindWeakestAlly: ArmyManager not found on this agent. Cannot find weak ally.");
+            armyManager = self.ArmyManager;
+            if (armyManager == null)
+            {
+                Debug.LogWarning("FindWeakestAlly: ArmyManager not found on this agent. Cannot find weak ally.");
+                return TaskStatus.Failure;
+            }
+        }
+
+        var alliesToHeal = armyManager.GetAllAllies(false, self)
+            .Select(ally => new {
+                ally,
+                health = ally.GetComponentInChildren<Health>()
+            })
+            .Where(x => x.health != null && x.health.HealthPercentage < 1.0f)
+            .ToList();
+
+        if (alliesToHeal.Count == 0)
+        {
+            returnedObject.Value = null;
             return TaskStatus.Failure;
         }
 
-        if (returnedObject == null)
+        ArmyElement bestAlly = null;
+        float bestScore = float.MinValue;
+
+        foreach (var potentialTarget in alliesToHeal)
         {
-            Debug.LogWarning("FindWeakestAlly: returnedObject is not assigned in the Behavior Designer editor. Task will fail.");
-            return TaskStatus.Failure;
+            float healthPercentage = potentialTarget.health.HealthPercentage;
+            float distance = Vector3.Distance(self.transform.position, potentialTarget.ally.transform.position);
+
+            // Score for health (0 to 1, higher is better)
+            float healthScore = 1.0f - healthPercentage;
+
+            // Score for distance (higher is better)
+            float distanceScore = 0f;
+            if (distance > 0.1f)
+            {
+                distanceScore = 1.0f / distance;
+            }
+
+            float finalScore = (healthScore * healthWeight) + (distanceScore * distanceWeight);
+
+            if (finalScore > bestScore)
+            {
+                bestScore = finalScore;
+                bestAlly = potentialTarget.ally;
+            }
         }
 
-        GameObject weakAlly = armyManager.GetRandomWeakAlly(self);
-
-        if (weakAlly != null)
+        if (bestAlly != null)
         {
-            returnedObject.Value = weakAlly.transform;
+            returnedObject.Value = bestAlly.transform;
             return TaskStatus.Success;
         }
 
-        // No weak ally found
         returnedObject.Value = null;
         return TaskStatus.Failure;
     }
