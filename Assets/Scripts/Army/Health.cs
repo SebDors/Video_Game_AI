@@ -10,6 +10,7 @@ public class Health : MonoBehaviour
 	[SerializeField] float m_StartHealth;
 	float m_Health;
 	public float Value => m_Health;
+	public float HealthPercentage => m_Health / m_StartHealth;
 
 	[SerializeField] Slider m_HealthBar;
 
