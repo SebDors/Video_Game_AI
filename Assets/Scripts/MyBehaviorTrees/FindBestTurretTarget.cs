@@ -64,7 +64,7 @@ public class FindBestTurretTarget : Action
             .Where(x => x.health != null)
             .ToList();
 
-        if (turrets.Count == 0)
+        if (turrets.Count <= 2)
         {
             returnedObject.Value = null;
             return TaskStatus.Failure;
